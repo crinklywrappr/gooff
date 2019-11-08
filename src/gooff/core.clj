@@ -268,7 +268,7 @@
          _ (validate-rules rules)]
      (reduce
       (fn [a [dp field]]
-        (update-in a [dp] conj field))
+        (update a dp conj field))
       {} rules)))
   ([] (rule {})))
 
@@ -306,12 +306,48 @@
     #(t/before? % (tz (t/now))))
    (take n)))
 
+(defn millis-from-now [dt]
+  (t/in-millis
+   (t/interval
+    (tz (t/now)) dt)))
+
 (defn at [dt f & args]
-  (.start
-   (Thread.
-    (fn []
-      (Thread/sleep
-       (t/in-millis
-        (t/interval
-         (tz (t/now)) dt)))
-      (apply f args)))))
+  (let [trigger (promise)]
+    (.start
+     (Thread.
+      (fn []
+        (when (not= @trigger :stop)
+          (apply f args)))))
+    (.start
+     (Thread.
+      (fn []
+        (Thread/sleep
+         (millis-from-now dt))
+        (deliver trigger :go))))
+    (fn [] (deliver trigger :stop))))
+
+(let [m (atom {})]
+
+  (declare schedule)
+
+  (defn sched-fn [nm rules f & args]
+    (apply @f args)
+    (->>
+     (-> [schedule nm rules f]
+         (concat args))
+     (apply trampoline)))
+
+  (defn schedule
+    "rules and f must be an atom"
+    [nm rules f & args]
+    (->>
+     (->
+      [(first (simulate @rules 1))
+       sched-fn nm rules f]
+      (concat args))
+     (apply at)
+     (swap! m assoc nm)))
+
+  (defn stop [nm]
+    (when-let [f (get @m nm)]
+      (f))))
