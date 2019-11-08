@@ -11,7 +11,14 @@
 (defn day-of-year [dt]
   (t/in-days
    (t/interval
-    (t/date-time (t/year dt)) dt)))
+    (t/minus
+     dt (t/days (t/day dt))
+     (t/months (t/month dt))
+     (t/hours (t/hour dt))
+     (t/minutes (t/minute dt))
+     (t/seconds (t/second dt))
+     (t/millis (t/milli dt)))
+    dt)))
 
 (defn tz [dt]
   (t/to-time-zone dt (t/default-time-zone)))
