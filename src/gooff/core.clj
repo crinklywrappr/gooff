@@ -298,3 +298,13 @@
    (drop-while
     #(t/before? % (tz (t/now))))
    (take n)))
+
+(defn at [dt f & args]
+  (.start
+   (Thread.
+    (fn []
+      (Thread/sleep
+       (t/in-millis
+        (t/interval
+         (tz (t/now)) dt)))
+      (apply f args)))))
