@@ -17,13 +17,14 @@
   (t/to-time-zone dt (t/default-time-zone)))
 
 (defn today
-  "returns a datetime of today without the time component.
-  Uses the default time-zone & returns a DateTime instead of LocalDate."
+  "returns start-of-day according to the local time-zone"
   []
-  (t/date-time
-   (t/year (tz (t/now)))
-   (t/month (tz (t/now)))
-   (t/day (tz (t/now)))))
+  (let [dt (tz (t/now))]
+    (t/minus
+     dt (t/hours (t/hour dt))
+     (t/minutes (t/minute dt))
+     (t/seconds (t/second dt))
+     (t/millis (t/milli dt)))))
 
 (defn year-from-today []
   (t/interval (today) (t/plus (today) (t/years 1))))
@@ -290,7 +291,10 @@
          h (time-gen rules :hour)
          m (time-gen rules :minute)
          s (time-gen rules :second)]
-     (t/date-time
-      (t/year d) (t/month d)
-      (t/day d) h m s))
+     (t/plus
+      d (t/hours h)
+      (t/minutes m)
+      (t/seconds s)))
+   (drop-while
+    #(t/before? % (tz (t/now))))
    (take n)))
