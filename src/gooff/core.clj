@@ -160,7 +160,7 @@
 
 (def range-pattern #"^(\d+)-(\d+)$")
 (def repetition-pattern #"^/(\d+)$")
-(def shifted-pattern #"^(-\d+)/(\d+)$")
+(def shifted-pattern #"^(-?\d+)/(\d+)$")
 
 (defn field-exact [n]
   (if (int? n)
