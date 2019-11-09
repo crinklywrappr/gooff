@@ -326,9 +326,10 @@
         (deliver trigger :go))))
     (fn [] (deliver trigger :stop))))
 
+;; The schedule map (simply named m) is write-protected
+;; because it houses some delicate internal state management
 (let [m (atom {})]
 
-  (declare schedule)
 
   (defn sched-fn [nm rules f & args]
     (apply @f args)
