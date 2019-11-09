@@ -330,25 +330,57 @@
 ;; because it houses some delicate internal state management
 (let [m (atom {})]
 
+  (defn sched-map [] @m)
 
-  (defn sched-fn [nm rules f & args]
-    (apply @f args)
-    (->>
-     (-> [schedule nm rules f]
-         (concat args))
-     (apply trampoline)))
+  (defn status [nm]
+    (get-in @m [nm :status]))
 
-  (defn schedule
-    "rules and f must be an atom"
-    [nm rules f & args]
+  (defn add-schedule [nm rules f]
+    (when (nil? (status nm))
+      (swap! m assoc nm {:rules rules :fn f})))
+
+  (defn remove-schedule [nm]
+    (when (nil? (status nm))
+      (swap! m dissoc nm)))
+
+  (defn update-rules [nm rules]
+    (swap! m assoc-in [nm :rules] rules))
+
+  (defn update-fn [nm f]
+    (swap! m assoc-in [nm :fn] f))
+
+  (declare start-aux)
+
+  (defn- sched-fn [nm & args]
+    (apply (get-in @m [nm :fn]) args)
+    (apply trampoline (concat [start-aux nm] args)))
+
+  (defn- start-aux [nm & args]
     (->>
      (->
-      [(first (simulate @rules 1))
-       sched-fn nm rules f]
+      [(-> @m (get-in [nm :rules])
+           (simulate 1) first)
+       sched-fn nm]
       (concat args))
      (apply at)
-     (swap! m assoc nm)))
+     (swap!
+      m assoc-in
+      [nm :stop])))
 
-  (defn stop [nm]
-    (when-let [f (get @m nm)]
-      (f))))
+  (defn start [nm & args]
+    (when (not= (status nm) :running)
+      (apply start-aux (concat [nm] args))
+      (swap! m assoc-in [nm :status] :running)))
+
+  (defn stop
+    ([nm]
+     (when-let [f (get-in @m [nm :stop])]
+       (f)
+       (swap!
+        m assoc nm
+        (select-keys
+         (get @m nm)
+         [:rules :fn]))))
+    ([]
+     (doseq [nm (keys @m)]
+       (stop nm)))))
