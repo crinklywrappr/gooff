@@ -296,11 +296,13 @@
     (s/includes? field ",") (map parse-long (s/split field #","))
     :else field))
 
+(defn parse-cron [s]
+  (map translate-cron
+       (-> s s/lower-case
+           sub-days (s/split #" "))))
+
 (defn cron [s]
-  (let [[minute hour
-         day-of-month
-         month weekday] (map translate-cron
-                             (s/split (sub-days s) #" "))]
+  (let [[minute hour day-of-month month weekday] (parse-cron s)]
     (rule {:minute [minute] :hour [hour]
            :day-of-month [day-of-month]
            :month [month] :weekday [weekday]})))
