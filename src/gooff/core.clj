@@ -1,5 +1,6 @@
 (ns gooff.core
-  (:require [clj-time.core :as t]))
+  (:require [clj-time.core :as t]
+            [clojure.string :as s]))
 
 (defn parse-long [s]
   (Long/parseLong s))
@@ -224,7 +225,7 @@
   (cond
     (int? field) (field-exact field)
     (coll? field) (field-alternation field)
-    (clojure.string/includes? field "-") (field-range field)
+    (s/includes? field "-") (field-range field)
     (= field "*") (field-star)
     (some? (re-matches repetition-pattern field)) (field-repetition field)
     (some? (re-matches shifted-pattern field)) (field-shifted-repetition field)
@@ -271,6 +272,40 @@
         (update a dp conj field))
       {} rules)))
   ([] (rule {})))
+
+;; ----- CRON -----
+
+(def day-abbrs
+  {"sun" "1"
+   "mon" "2"
+   "tue" "3"
+   "wed" "4"
+   "thu" "5"
+   "fri" "6"
+   "sat" "7"})
+
+(defn sub-days [field]
+  (reduce
+   (fn [a [abbr n]]
+     (s/replace a abbr n))
+   field day-abbrs))
+
+(defn translate-cron [field]
+  (cond
+    (re-find #"^\d$" field) (parse-long field)
+    (s/includes? field ",") (map parse-long (s/split field #","))
+    :else field))
+
+(defn cron [s]
+  (let [[minute hour
+         day-of-month
+         month weekday] (map translate-cron
+                             (s/split (sub-days s) #" "))]
+    (rule {:minute [minute] :hour [hour]
+           :day-of-month [day-of-month]
+           :month [month] :weekday [weekday]})))
+
+;; --- END CRON ---
 
 (defn date-matches? [rules dt]
   (every?
