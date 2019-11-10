@@ -108,9 +108,9 @@
 (defn days-seq
   "Returns a seq of days between from & to"
   [from to]
-  (->> from
-       (iterate tomorrow)
-       (take-while #(t/before? % to))))
+  (take-while
+   #(before? % to)
+   (iterate tomorrow from)))
 
 (defn add-time
   "Add the time parameters the the given date"
