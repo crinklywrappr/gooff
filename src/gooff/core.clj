@@ -454,16 +454,19 @@
   (apply trampoline (concat [start-aux nm] args)))
 
 (defn- start-aux [nm & args]
-  (->>
-   (->
-    [(-> @sched-map (get-in [nm :rules])
-         (simulate 1) first)
-     sched-fn nm]
-    (concat args))
-   (apply at)
-   (swap!
-    sched-map assoc-in
-    [nm :stop])))
+  (let [next-run (-> @sched-map (get-in [nm :rules])
+                     (simulate 1) first)]
+    (->>
+     (->
+      [next-run sched-fn nm]
+      (concat args))
+     (apply at)
+     (swap!
+      sched-map assoc-in
+      [nm :stop]))
+    (swap!
+     sched-map assoc-in
+     [nm :next-run] next-run)))
 
 (defn start [nm & args]
   (when (not= (status nm) :running)
