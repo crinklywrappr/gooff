@@ -402,6 +402,7 @@
   sched-map
   (atom {}))
 
+(defn get-sched-map [] @sched-map)
 
 (defn status [nm]
   (get-in @sched-map [nm :status]))
