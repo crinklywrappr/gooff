@@ -2,8 +2,12 @@
   (:require [clj-time.core :as t]
             [clojure.string :as s]))
 
+;; --- UTIL ---
+
 (defn parse-long [s]
   (Long/parseLong s))
+
+;; --- DATE-TIME ---
 
 (defn weekday [dt]
   (if (== (t/day-of-week dt) 7)
@@ -46,6 +50,13 @@
        (take-while
         #(t/before?
           % (t/end interval)))))
+
+(defn millis-from-now [dt]
+  (t/in-millis
+   (t/interval
+    (tz (t/now)) dt)))
+
+;; --- SCHEDULING FIELDS ---
 
 (defn basic-valid?
   [dp n]
@@ -231,6 +242,8 @@
     (some? (re-matches shifted-pattern field)) (field-shifted-repetition field)
     :else (throw (IllegalArgumentException. (format "illegal field: %s" field)))))
 
+;; --- RULES ---
+
 ;; default rule is every day at midnight
 (def default-rule
   {:day-of-month ["*"]
@@ -273,7 +286,7 @@
       {} rules)))
   ([] (rule {})))
 
-;; ----- CRON -----
+;; --- CRON ---
 
 (def day-abbrs
   {"sun" "1"
@@ -307,7 +320,7 @@
            :day-of-month [day-of-month]
            :month [month] :weekday [weekday]})))
 
-;; --- END CRON ---
+;; --- SIMULATION ---
 
 (defn date-matches? [rules dt]
   (every?
@@ -343,10 +356,7 @@
     #(t/before? % (tz (t/now))))
    (take n)))
 
-(defn millis-from-now [dt]
-  (t/in-millis
-   (t/interval
-    (tz (t/now)) dt)))
+;;  --- SCHEDULING ---
 
 (defn at [dt f & args]
   (let [trigger (promise)]
