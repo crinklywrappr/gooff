@@ -9,26 +9,49 @@
 
 ;; --- DATE-TIME ---
 
-(defn weekday [dt]
+;; needed for scheduling fields
+
+;; convenience
+
+;; convenience
+(defn- tz
+  "Returns the datetime translated to the local timezone"
+  [dt]
+  (t/to-time-zone dt (t/default-time-zone)))
+
+;; needed for scheduling fields
+(defn weekday
+  "Returns the weekday 1-7, with Sunday=1 & Saturday=7
+  This differs from most cron implementations on purpose.
+  I never liked that years and months began counting at 1,
+  but weekdays did not."
+  [dt]
   (if (== (t/day-of-week dt) 7)
     1 (inc (t/day-of-week dt))))
 
-(defn day-of-year [dt]
-  (t/in-days
-   (t/interval
-    (t/minus
-     dt (t/days (t/day dt))
-     (t/months (t/month dt))
-     (t/hours (t/hour dt))
-     (t/minutes (t/minute dt))
-     (t/seconds (t/second dt))
-     (t/millis (t/milli dt)))
-    dt)))
+(defn day-of-year
+  "Returns the day of the year, eg 1-365"
+  [dt]
+  (inc
+   (t/in-days
+    (t/interval
+     (t/date-time
+      (t/year dt))
+     (t/date-time
+      (t/year dt)
+      (t/month dt)
+      (t/day dt))))))
 
-(defn week-number-of-year [dt]
+(defn week-number-of-year
+  "Returns the week number of the year eg 1-52"
+  [dt]
   (t/week-number-of-year dt))
 
-(defn date-part [dt dp]
+(defn date-part
+  "Returns the datepart (dp) of dt.  dp values are:
+  :year :month :day :hour :minute :second
+  :week-of-year :day-of-year :day-of-month :weekday"
+  [dt dp]
   (case dp
     ;; standard
     :year (t/year dt)
@@ -48,8 +71,7 @@
 
     nil))
 
-(defn tz [dt]
-  (t/to-time-zone dt (t/default-time-zone)))
+;; needed for simulation
 
 (defn today
   "returns start-of-day according to the local time-zone"
@@ -61,32 +83,52 @@
      (t/seconds (t/second dt))
      (t/millis (t/milli dt)))))
 
-(defn year-from-today []
-  (t/interval (today) (t/plus (today) (t/years 1))))
+(defn add-year
+  "Adds a year to the given datetime"
+  [dt]
+  (t/plus dt (t/years 1)))
 
-(defn tomorrow [dt]
+(defn tomorrow
+  "Adds a day to the given datetime"
+  [dt]
   (t/plus dt (t/days 1)))
 
-(defn days-seq [interval]
-  (->> (t/start interval)
+(defn before?
+  "Returns true if a < b,
+  a & b are both date-times"
+  [a b]
+  (t/before? a b))
+
+(defn before-now?
+  "Returns true if dt is before
+  the current local datetime"
+  [dt]
+  (before? dt (tz (t/now))))
+
+(defn days-seq
+  "Returns a seq of days between from & to"
+  [from to]
+  (->> from
        (iterate tomorrow)
-       (take-while
-        #(t/before?
-          % (t/end interval)))))
+       (take-while #(t/before? % to))))
 
-(defn millis-from-now [dt]
-  (t/in-millis
-   (t/interval
-    (tz (t/now)) dt)))
-
-(defn add-time [dt hours minutes seconds]
+(defn add-time
+  "Add the time parameters the the given date"
+  [dt hours minutes seconds]
   (t/plus
    dt (t/hours hours)
    (t/minutes minutes)
    (t/seconds seconds)))
 
-(defn before-now? [dt]
-  (t/before? dt (tz (t/now))))
+;; needed for scheduling
+(defn millis-from-now
+  "Given a datetime ahead of the current
+  local datetime, returns the difference
+  in milliseconds"
+  [dt]
+  (t/in-millis
+   (t/interval
+    (tz (t/now)) dt)))
 
 ;; --- SCHEDULING FIELDS ---
 
@@ -399,7 +441,7 @@
   (->>
    (for [d (filter
             (partial date-matches? rules)
-            (days-seq (year-from-today)))
+            (days-seq (today) (add-year (today))))
          h (time-gen rules :hour)
          m (time-gen rules :minute)
          s (time-gen rules :second)]
