@@ -83,20 +83,10 @@
   (valid? [_ dp] "Returns true if the field is valid for the given datepart")
   (fieldStr [_] "Returns a string representing the field"))
 
-(defprotocol IDateField
-  (matches? [_ dt dp] "Returns true if the datepart (dp) of date matches the field"))
-
-(defprotocol ITimeField
-  (gen [_ dp] "returns a seq of all the exact matches for the given datepart (dp)"))
-
 (defrecord FieldExact [n]
   IField
   (valid? [_ dp] (basic-valid? dp n))
-  (fieldStr [_] (str n))
-  IDateField
-  (matches? [_ dt dp] (== (date-part dt dp) n))
-  ITimeField
-  (gen [_ dp] [n]))
+  (fieldStr [_] (str n)))
 
 (defrecord FieldAlternation [coll]
   IField
@@ -104,78 +94,31 @@
     (->> coll
          (map (partial basic-valid? dp))
          (every? true?)))
-  (fieldStr [_] (str coll))
-  IDateField
-  (matches? [_ dt dp]
-    (let [dp (date-part dt dp)]
-      (some #(== dp %) coll)))
-  ITimeField
-  (gen [_ dp] coll))
+  (fieldStr [_] (str coll)))
 
 (defrecord FieldRange [from to]
   IField
   (valid? [_ dp]
     (and (basic-valid? dp from)
          (basic-valid? dp to)))
-  (fieldStr [_] (format "%s-%s" from to))
-  IDateField
-  (matches? [_ dt dp]
-    (<= from (date-part dt dp) to))
-  ITimeField
-  (gen [_ dp] (range from to)))
+  (fieldStr [_] (format "%s-%s" from to)))
 
 (defrecord FieldStar []
   IField
   (valid? [_ dp] true)
-  (fieldStr [_] "*")
-  IDateField
-  (matches? [_ dt dp] true)
-  ITimeField
-  (gen [_ dp]
-    (case dp
-      :hour (range 0 24)
-      :minute (range 0 60)
-      :second (range 0 60))))
+  (fieldStr [_] "*"))
 
 (defrecord FieldRepetition [rep]
   IField
   (valid? [_ dp]
     (basic-valid? dp rep))
-  (fieldStr [_] (format "/%s" rep))
-  IDateField
-  (matches? [_ dt dp]
-    (zero? (mod (date-part dt dp) rep)))
-  ITimeField
-  (gen [_ dp]
-    (range
-     0
-     (case dp
-       :hour 24
-       :minute 60
-       :second 60)
-     rep)))
+  (fieldStr [_] (format "/%s" rep)))
 
 (defrecord FieldShiftedRepetition [shift rep]
   IField
   (valid? [_ dp]
     (basic-valid? dp (+ rep shift)))
-  (fieldStr [_] (format "%s/%s" shift rep))
-  IDateField
-  (matches? [_ dt dp]
-    (zero? (mod (+ (date-part dt dp) (* shift -1)) rep)))
-  ITimeField
-  (gen [_ dp]
-    (take-while
-     (partial basic-valid? dp)
-     (map
-      #(+ % shift)
-      (range
-       0
-       (case dp
-         :hour 24
-         :minute 60
-         :second 60)
-       rep)))))
+  (fieldStr [_] (format "%s/%s" shift rep)))
 
 (def range-pattern #"^(\d+)-(\d+)$")
 (def repetition-pattern #"^/(\d+)$")
@@ -322,6 +265,88 @@
 
 ;; --- SIMULATION ---
 
+(defprotocol IDateField
+  (matches? [_ dt dp] "Returns true if the datepart (dp) of date matches the field"))
+
+(defprotocol ITimeField
+  (gen [_ dp] "returns a seq of all the exact matches for the given datepart (dp)"))
+
+(extend-protocol IDateField
+
+  FieldExact
+  (matches? [this dt dp]
+    (== (date-part dt dp) (:n this)))
+
+  FieldAlternation
+  (matches? [this dt dp]
+    (let [dp (date-part dt dp)]
+      (some #(== dp %) (:coll this))))
+
+  FieldRange
+  (matches? [this dt dp]
+    (<= (:from this)
+        (date-part dt dp)
+        (:to this)))
+
+  FieldStar
+  (matches? [_ dt dp] true)
+
+  FieldRepetition
+  (matches? [this dt dp]
+    (-> (date-part dt dp)
+        (mod  (:rep this))
+        zero?))
+
+  FieldShiftedRepetition
+  (matches? [this dt dp]
+    (-> (date-part dt dp)
+        (+  (* (:shift this) -1))
+        (mod (:rep this))
+        zero?)))
+
+(extend-protocol ITimeField
+
+  FieldExact
+  (gen [this dp] [(:n this)])
+
+  FieldAlternation
+  (gen [this dp] (:coll this))
+
+  FieldRange
+  (gen [this dp]
+    (range (:from this) (:to this)))
+
+  FieldStar
+  (gen [_ dp]
+    (case dp
+      :hour (range 0 24)
+      :minute (range 0 60)
+      :second (range 0 60)))
+
+  FieldRepetition
+  (gen [this dp]
+    (range
+     0
+     (case dp
+       :hour 24
+       :minute 60
+       :second 60)
+     (:rep this)))
+
+  FieldShiftedRepetition
+  (gen [this dp]
+    (take-while
+     (partial basic-valid? dp)
+     (map
+      #(+ % (:shift this))
+      (range
+       0
+       (case dp
+         :hour 24
+         :minute 60
+         :second 60)
+       (:rep this))))))
+
 (defn date-matches? [rules dt]
   (every?
    (fn [[dp fs]]
@@ -373,61 +398,60 @@
         (deliver trigger :go))))
     (fn [] (deliver trigger :stop))))
 
-;; The schedule map (simply named m) is write-protected
-;; because it houses some delicate internal state management
-(let [m (atom {})]
+(def ^{:private true}
+  sched-map
+  (atom {}))
 
-  (defn sched-map [] @m)
 
-  (defn status [nm]
-    (get-in @m [nm :status]))
+(defn status [nm]
+  (get-in @sched-map [nm :status]))
 
-  (defn add-schedule [nm rules f]
-    (when (nil? (status nm))
-      (swap! m assoc nm {:rules rules :fn f})))
+(defn add-schedule [nm rules f]
+  (when (nil? (status nm))
+    (swap! sched-map assoc nm {:rules rules :fn f})))
 
-  (defn remove-schedule [nm]
-    (when (nil? (status nm))
-      (swap! m dissoc nm)))
+(defn remove-schedule [nm]
+  (when (nil? (status nm))
+    (swap! sched-map dissoc nm)))
 
-  (defn update-rules [nm rules]
-    (swap! m assoc-in [nm :rules] rules))
+(defn update-rules [nm rules]
+  (swap! sched-map assoc-in [nm :rules] rules))
 
-  (defn update-fn [nm f]
-    (swap! m assoc-in [nm :fn] f))
+(defn update-fn [nm f]
+  (swap! sched-map assoc-in [nm :fn] f))
 
-  (declare start-aux)
+(declare start-aux)
 
-  (defn- sched-fn [nm & args]
-    (apply (get-in @m [nm :fn]) args)
-    (apply trampoline (concat [start-aux nm] args)))
+(defn- sched-fn [nm & args]
+  (apply (get-in @sched-map [nm :fn]) args)
+  (apply trampoline (concat [start-aux nm] args)))
 
-  (defn- start-aux [nm & args]
-    (->>
-     (->
-      [(-> @m (get-in [nm :rules])
-           (simulate 1) first)
-       sched-fn nm]
-      (concat args))
-     (apply at)
+(defn- start-aux [nm & args]
+  (->>
+   (->
+    [(-> @sched-map (get-in [nm :rules])
+         (simulate 1) first)
+     sched-fn nm]
+    (concat args))
+   (apply at)
+   (swap!
+    sched-map assoc-in
+    [nm :stop])))
+
+(defn start [nm & args]
+  (when (not= (status nm) :running)
+    (apply start-aux (concat [nm] args))
+    (swap! sched-map assoc-in [nm :status] :running)))
+
+(defn stop
+  ([nm]
+   (when-let [f (get-in @sched-map [nm :stop])]
+     (f)
      (swap!
-      m assoc-in
-      [nm :stop])))
-
-  (defn start [nm & args]
-    (when (not= (status nm) :running)
-      (apply start-aux (concat [nm] args))
-      (swap! m assoc-in [nm :status] :running)))
-
-  (defn stop
-    ([nm]
-     (when-let [f (get-in @m [nm :stop])]
-       (f)
-       (swap!
-        m assoc nm
-        (select-keys
-         (get @m nm)
-         [:rules :fn]))))
-    ([]
-     (doseq [nm (keys @m)]
-       (stop nm)))))
+      sched-map assoc nm
+      (select-keys
+       (get @sched-map nm)
+       [:rules :fn]))))
+  ([]
+   (doseq [nm (keys @sched-map)]
+     (stop nm))))
