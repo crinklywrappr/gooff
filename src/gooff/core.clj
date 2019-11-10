@@ -408,7 +408,7 @@
   (get-in @sched-map [nm :status]))
 
 (defn add-schedule [nm rules f]
-  (when (nil? (status nm))
+  (when (not (contains? @sched-map nm))
     (swap! sched-map assoc nm {:rules rules :fn f})))
 
 (defn remove-schedule [nm]
