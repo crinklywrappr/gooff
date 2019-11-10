@@ -25,6 +25,29 @@
      (t/millis (t/milli dt)))
     dt)))
 
+(defn week-number-of-year [dt]
+  (t/week-number-of-year dt))
+
+(defn date-part [dt dp]
+  (case dp
+    ;; standard
+    :year (t/year dt)
+    :month (t/month dt)
+    :day (t/day dt)
+
+    :hour (t/hour dt)
+    :minute (t/minute dt)
+    :second (t/second dt)
+
+    ;; non-standard
+    :week-of-year (week-number-of-year dt)
+
+    :day-of-year (day-of-year dt)
+    :day-of-month (t/day dt)
+    :weekday (weekday dt)
+
+    nil))
+
 (defn tz [dt]
   (t/to-time-zone dt (t/default-time-zone)))
 
@@ -56,6 +79,15 @@
    (t/interval
     (tz (t/now)) dt)))
 
+(defn add-time [dt hours minutes seconds]
+  (t/plus
+   dt (t/hours hours)
+   (t/minutes minutes)
+   (t/seconds seconds)))
+
+(defn before-now? [dt]
+  (t/before? dt (tz (t/now))))
+
 ;; --- SCHEDULING FIELDS ---
 
 (defn basic-valid?
@@ -69,15 +101,6 @@
    (and (= dp :hour) (<= 0 n 23))
    (and (= dp :minute) (<= 0 n 59))
    (and (= dp :second) (<= 0 n 59))))
-
-(defn date-part [dt dp]
-  (case dp
-    :day-of-month (t/day dt)
-    :month (t/month dt)
-    :weekday (weekday dt)
-    :day-of-year (day-of-year dt)
-    :week-of-year (t/week-number-of-year dt)
-    nil))
 
 (defprotocol IField
   (valid? [_ dp] "Returns true if the field is valid for the given datepart")
@@ -257,8 +280,15 @@
        (-> s s/lower-case
            sub-days (s/split #" "))))
 
+(defn validate-cron [coll]
+  (if (== (count coll) 5)
+    coll
+    (throw
+     (IllegalArgumentException.
+      "Cron needs exactly 5 fields eg * * * * *"))))
+
 (defn cron [s]
-  (let [[minute hour day-of-month month weekday] (parse-cron s)]
+  (let [[minute hour day-of-month month weekday] (validate-cron (parse-cron s))]
     (rule {:minute [minute] :hour [hour]
            :day-of-month [day-of-month]
            :month [month] :weekday [weekday]})))
@@ -373,12 +403,8 @@
          h (time-gen rules :hour)
          m (time-gen rules :minute)
          s (time-gen rules :second)]
-     (t/plus
-      d (t/hours h)
-      (t/minutes m)
-      (t/seconds s)))
-   (drop-while
-    #(t/before? % (tz (t/now))))
+     (add-time d h m s))
+   (drop-while before-now?)
    (take n)))
 
 ;;  --- SCHEDULING ---
