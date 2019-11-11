@@ -280,8 +280,10 @@
 
 (defn rule
   "Allows you to specify rules a-la-cart, and anything missing
-  will use the default rules eg {:day-of-year [\"/5\"]} will
+  will use the default rules eg `{:day-of-year [\"/5\"]}` will
   return a rule which describes execution every 5 days at midnight.
+
+  With no args it uses the default rule.
 
   Also performs validation.  Throws an exception if invalid."
   ([m]
@@ -347,7 +349,7 @@
   Performs validation.  Throws an exception if invalid.
 
   An example:
-  /5 * * 11,12 MON-FRI Every 5 minutes on weekdays in Nov & Dec"
+  `\"/5 * * 11,12 MON-FRI\"` Every 5 minutes on weekdays in Nov & Dec"
   [s]
   (let [[minute hour day-of-month month weekday] (validate-cron (parse-cron s))]
     (rule {:minute [minute] :hour [hour]
@@ -492,7 +494,10 @@
 
 ;; --- SCHEDULING ---
 
-(defn at [dt f & args]
+(defn at
+  "Specify the function f to run at a particular datetime.
+  Returns a function which will prevent execution of f when called."
+  [dt f & args]
   (let [trigger (promise)]
     (.start
      (Thread.
@@ -509,27 +514,47 @@
 
 (def
   ^{:private true
-    :doc "gated in order to protect some delicate state management"}
+    :doc "private in order to protect some delicate state management"}
   sched-map
   (atom {}))
 
-(defn get-sched-map [] @sched-map)
+(defn get-sched-map
+  "Returns the schedule map (dereffed)"
+  []
+  @sched-map)
 
-(defn status [nm]
+(defn status
+  "Returns the status of a given process"
+  [nm]
   (get-in @sched-map [nm :status]))
 
-(defn add-schedule [nm rules f]
+(defn add-schedule
+  "Adds a task to the sched-map.  Expects a name (nm), rules for
+  describing execution eg `(rule ...)` or `(cron ...)`, a function f
+  and args which will be passed to f.
+  eg `(add-schedule \"test\" (rule) (fn [] ...))`"
+  [nm rules f]
   (when (not (contains? @sched-map nm))
     (swap! sched-map assoc nm {:rules rules :fn f})))
 
-(defn remove-schedule [nm]
+(defn remove-schedule
+  "Removes a task from sched-map if it is not running"
+  [nm]
   (when (nil? (status nm))
     (swap! sched-map dissoc nm)))
 
-(defn update-rules [nm rules]
+(defn update-rules
+  "Alter the execution schedule of a
+  process.  Can be done while running.
+  If you need this to take effect
+  immediately, call `(restart ...)`"
+  [nm rules]
   (swap! sched-map assoc-in [nm :rules] rules))
 
-(defn update-fn [nm f]
+(defn update-fn
+  "Updates the function associated with the task nm.
+  Can be done while the task is running."
+  [nm f]
   (swap! sched-map assoc-in [nm :fn] f))
 
 (declare start-aux)
@@ -554,12 +579,15 @@
      sched-map assoc-in
      [nm :next-run] next-run)))
 
-(defn start [nm & args]
+(defn start
+  "start off task execution."
+  [nm & args]
   (when (not= (status nm) :running)
     (apply start-aux (concat [nm] args))
     (swap! sched-map assoc-in [nm :status] :running)))
 
 (defn stop
+  "Stop task execution.  With no args, stops all task execution."
   ([nm]
    (when-let [f (get-in @sched-map [nm :stop])]
      (f)
@@ -572,6 +600,8 @@
    (doseq [nm (keys @sched-map)]
      (stop nm))))
 
-(defn restart [nm & args]
+(defn restart
+  "Restarts task execution."
+  [nm & args]
   (stop nm)
   (apply start (concat [nm] args)))
