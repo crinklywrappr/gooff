@@ -69,6 +69,18 @@ Now we want to check if our rule does what we want.  This is accomplished by cal
 
 Your dates will look different, but you should see the seconds counting up by 5 and landing on each 5th second.  Hooray!
 
+#### Things to consider
+
+`simulate` only searches for matching datetimes 2 years from when you run it, so if you aren't seeing the results you expect, that may be why eg
+
+```clojure
+;; asking for 10 results but i only get 2
+(simulate (rule {:month [12] :day-of-month [1]}) 10)
+;; =>
+(#object[org.joda.time.DateTime 0x37cbc213 "2019-12-01T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x66600208 "2020-12-01T00:00:00.000-06:00"])
+```
+
 
 ### Scheduling
 
