@@ -9,6 +9,13 @@ Add to your project
     gooff "1.0.0"
 
 
+## Quickstart
+
+Pull it into your namespace
+
+    (require '[gooff.core :refer :all])
+
+
 ### Rules
 
 Scheduling rules are specified à la carte by calling `(rule ...)` eg this describes a schedule which executes every 5 seconds:
@@ -100,6 +107,43 @@ You may have noticed that `(at ...)` returned a function.  Call it to prevent ex
 
 
 ### Scheduling Orchestration
+
+`at` is a pretty good cornerstone for writing your own scheduling system.  However, `gooff` includes a simple system if you just want the basics.  Begin by calling `(add-schedule...)`.  We'll add two.
+
+```clojure
+;; Let's define another fn
+(defn hello [who]
+  (println (format "Hello, %s!" who)))
+
+;; We'll schedule both of our tasks to execute at the same time
+;; We give them a name as the first parameter so they can be referenced later
+(add-schedule "i-presume" myrule i-presume)
+(add-schedule "hello" myrule hello)
+```
+
+
+You'll notice that both of these functions return a map.  This is the schedule map and you can inspect it at any time using `(get-sched-map)`.
+
+Let's kick them both off.
+
+```clojure
+(start "i-presume" "Dr Livingstone")
+(start "hello" "World")
+; => (some text is printed out
+```
+
+Feel free to call `(update-rules ...)`, `(update-fn ...)`, and `(restart ...)` in order to change the scheduling and execution characterisics.  This can be done live, *while the tasks are running*.
+
+Call `(stop)` to kill the scheduling system, or pass in a name to kill an individual task.
+
+```clojure
+(stop)
+```
+
+#### Things to consider
+
+1. `(update-rules ...)` won't take effect until after the next scheduled execution.  To force the new rule, call `(restart ...)` afterward.
+
 
 ## License
 
