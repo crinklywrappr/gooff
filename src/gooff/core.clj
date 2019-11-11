@@ -238,10 +238,10 @@
   (cond
     (int? field) (field-exact field)
     (coll? field) (field-alternation field)
-    (s/includes? field "-") (field-range field)
-    (= field "*") (field-star)
     (some? (re-matches repetition-pattern field)) (field-repetition field)
     (some? (re-matches shifted-pattern field)) (field-shifted-repetition field)
+    (s/includes? field "-") (field-range field)
+    (= field "*") (field-star)
     :else (throw (IllegalArgumentException. (format "illegal field: %s" field)))))
 
 ;; --- RULES ---
@@ -561,15 +561,19 @@
 
 (defn- sched-fn [nm & args]
   (apply (get-in @sched-map [nm :fn]) args)
-  (apply trampoline (concat [start-aux nm] args)))
+  (apply trampoline (concat [start-aux nm sched-fn] args)))
 
-(defn- start-aux [nm & args]
+(defn- iterate-fn [nm & args]
+  (let [args (apply (get-in @sched-map [nm :fn]) args)]
+    (apply trampoline (concat [start-aux nm iterate-fn] [args]))))
+
+(defn- start-aux [nm f & args]
   (let [next-run (-> @sched-map
                      (get-in [nm :rules])
                      simulate first)]
     (->>
      (->
-      [next-run sched-fn nm]
+      [next-run f nm]
       (concat args))
      (apply at)
      (swap!
@@ -580,11 +584,20 @@
      [nm :next-run] next-run)))
 
 (defn start
-  "start off task execution."
+  "kick off task execution."
   [nm & args]
   (when (not= (status nm) :running)
-    (apply start-aux (concat [nm] args))
+    (apply start-aux (concat [nm sched-fn] args))
     (swap! sched-map assoc-in [nm :status] :running)))
+
+(defn start-iterate
+  "kicks off iterative task execution.  This uses the
+  output of each function call as the input of the next"
+  [nm & args]
+  (when (not= (status nm) :running)
+    (apply start-aux (concat [nm iterate-fn] args))
+    (swap! sched-map assoc-in [nm :status] :running)
+    (swap! sched-map assoc-in [nm :type] :iterative)))
 
 (defn stop
   "Stop task execution.  With no args, stops all task execution."
@@ -603,5 +616,8 @@
 (defn restart
   "Restarts task execution."
   [nm & args]
-  (stop nm)
-  (apply start (concat [nm] args)))
+  (let [typ (get-in @sched-map [nm :type])]
+    (stop nm)
+    (case typ
+      nil (apply start (concat [nm] args))
+      :iterative (apply start-iterate (concat [nm] args)))))
