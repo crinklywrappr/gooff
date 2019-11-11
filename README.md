@@ -192,6 +192,65 @@ Included in the scheduling system is a functional way to provide new args to you
 ```
 
 
+## Rules (redux)
+
+The `default-rule` does a good job explaining what dateparts are configurable.
+
+```clojure
+default-rule
+{:day-of-month ["*"],
+ :month ["*"],
+ :weekday ["*"],
+ :day-of-year ["*"],
+ :week-of-year ["*"],
+ :hour [0],
+ :minute [0],
+ :second [0]}
+```
+
+The following types of fields can be specified:
+
+```clojure
+;; exact match: run on the 3rd
+(rule {:day-of-month [3]})
+
+;; alternation: run on the 3rd, 10th, & 27th
+(rule {:day-of-month [[3 10 27]]})
+
+;; range: run on the 1st, 2nd, 3rd, 4th, & 5th
+(rule {:day-of-month ["1-5"]})
+
+;; star: run every day
+(rule {:day-of-month ["*"]})
+
+;; repetition: run on the 5th, 10th, 15th, 20th, 25th, 30th day
+(rule {:day-of-month ["/5"]})
+
+;; shifted repetition: run on the 7th, 12th, 17th, 22nd, 27th day
+(rule {:day-of-month ["2/5"]})
+
+;; negative shifted repetition: run on the 3rd, 8th, 13th, 18th, 23rd, 28th day
+(rule {:day-of-month ["-2/5"]})
+```
+
+In order for a datetime to match a rule, it must match the field for *every* datepart.  However, you can specify that *any* match for a particular date-part constitutes a match for the entire datepart.  In other words, there is an *and* relationship between dateparts, and an *or* relationship _within_ dateparts.  For example:
+
+```clojure
+;; in this example january, february, june, november, and december are all valid 
+;; between the 1st and the 10th, the 28th, and any day falling on a 5th offset by 15 days
+(simulate (rule {:day-of-month ["1-10" "15/5" 28] :month ["1-2" 6 [11 12]]}) 10)
+(#object[org.joda.time.DateTime 0x260eabab "2019-11-20T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x77918d75 "2019-11-25T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x33b20f3a "2019-11-28T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x1e26da59 "2019-11-30T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x659bb2a2 "2019-12-01T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x1e1a7141 "2019-12-02T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x3df27667 "2019-12-03T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x15ae8792 "2019-12-04T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x2d982927 "2019-12-05T00:00:00.000-06:00"]
+ #object[org.joda.time.DateTime 0x6045c5ac "2019-12-06T00:00:00.000-06:00"])
+```
+
 
 ## License
 
