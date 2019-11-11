@@ -28,7 +28,7 @@ Scheduling rules are specified à la carte by calling `(rule ...)` eg this descr
 Or you can call `(rule ...)` without any parameters to get the default rule, which expresses execution every day at midnight.
 
 
-### Cron
+#### Cron
 
 Additionally, rules can be created from basic cron syntax by calling `(cron ...)` eg this specifies execution which occurs every 5 minutes on weekdays in November & December:
 
@@ -250,6 +250,11 @@ In order for a datetime to match a rule, it must match the field for *every* dat
  #object[org.joda.time.DateTime 0x2d982927 "2019-12-05T00:00:00.000-06:00"]
  #object[org.joda.time.DateTime 0x6045c5ac "2019-12-06T00:00:00.000-06:00"])
 ```
+
+
+### Caveat
+
+`:day-of-week` is 1-7, SUN-SAT.  This differs from most cron/scheduling implementations.  I never liked that all of the other date components started counting at 1 while this one was different than the rest, so it made sense to normalize them.
 
 
 ## License
