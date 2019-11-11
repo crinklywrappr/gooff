@@ -451,7 +451,12 @@
   [dt]
   (before? dt (now)))
 
-(defn date-matches? [rules dt]
+(defn date-matches?
+  "Returns true if the rule describe that
+  execution will occur on the given date
+  (time component is not under consideration
+  in this function)"
+  [rules dt]
   (every?
    (fn [[dp fs]]
      (some #(matches? % dt dp) fs))
@@ -459,7 +464,10 @@
     rules [:day-of-month :month :weekday
            :day-of-year :week-of-year])))
 
-(defn time-gen [rules dp]
+(defn time-gen
+  "Returns a sequence of numbers which are
+  exact matches for the given datepart."
+  [rules dp]
   (->> rules dp
        (map #(gen % dp))
        (apply concat)
