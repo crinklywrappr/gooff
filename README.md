@@ -145,6 +145,42 @@ Call `(stop)` to kill the scheduling system, or pass in a name to kill an indivi
 1. `(update-rules ...)` won't take effect until after the next scheduled execution.  To force the new rule, call `(restart ...)` afterward.
 
 
+### Scheduling System Bonus
+
+Included in the scheduling system is a functional way to provide new args to your tasks without calling `(restart ...)`.  It works similar to `(iterate ...)`: the output of each function call is used as the parameter input to the next.
+
+```clojure
+;; Lets use the famous collatz conjecture for testing!
+(defn collatz [n]
+  (println n)
+  (if (even? n)
+    (/ n 2)
+    (inc (* 3 n))))
+    
+(add-schedule "collatz" myrule collatz)
+
+(start-iterate "collatz" 12)
+;; => (prints)
+;; 12
+;; 6
+;; 10
+;; 5
+;; 16
+;; 8
+;; 4
+;; 2
+;; 1
+;; 4
+;; 2
+;; 1
+;; ...
+
+;; after waiting a while ...
+(stop)
+```
+
+
+
 ## License
 
 Copyright © 2019
