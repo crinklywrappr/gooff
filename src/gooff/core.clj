@@ -166,13 +166,15 @@
 (defrecord FieldRepetition [rep]
   IField
   (valid? [_ dp]
-    (basic-valid? dp rep))
+    (and (pos? rep) (basic-valid? dp rep)))
   (fieldStr [_] (format "/%s" rep)))
 
 (defrecord FieldShiftedRepetition [shift rep]
   IField
   (valid? [_ dp]
-    (basic-valid? dp (+ rep shift)))
+    (and (pos? rep)
+         (or (neg? shift) (pos? shift))
+         (basic-valid? dp (+ rep shift))))
   (fieldStr [_] (format "%s/%s" shift rep)))
 
 (def range-pattern #"^(\d+)-(\d+)$")
@@ -224,7 +226,9 @@
   (let [[shift rep] (->> s
                          (re-find shifted-pattern)
                          rest (map parse-long))]
-    (if (and (some? shift) (some? rep) (pos? (+ rep shift)))
+    (if (and (some? shift) (some? rep)
+             (or (neg? shift) (pos? shift))
+             (pos? rep))
       (->FieldShiftedRepetition shift rep)
       (throw
        (IllegalArgumentException.
@@ -387,15 +391,16 @@
   FieldRepetition
   (matches? [this dt dp]
     (-> (date-part dt dp)
-        (mod  (:rep this))
+        (mod (:rep this))
         zero?))
 
   FieldShiftedRepetition
   (matches? [this dt dp]
-    (-> (date-part dt dp)
-        (+  (* (:shift this) -1))
-        (mod (:rep this))
-        zero?)))
+    (let [dp (date-part dt dp)]
+      (when (not= dp (:shift this))
+        (-> (+ dp (* (:shift this) -1))
+            (mod (:rep this))
+            zero?)))))
 
 (extend-protocol ITimeField
 
