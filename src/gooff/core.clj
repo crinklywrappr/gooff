@@ -258,8 +258,8 @@
    :minute       [ 0 ]
    :second       [ 0 ]})
 
-(defn parse-rules [rules]
-  (->> rules
+(defn- parse-rules [m]
+  (->> m
        (merge default-rule)
        (map
         (fn [[k v]]
@@ -271,8 +271,7 @@
        (remove empty?)
        (mapcat identity)))
 
-(defn validate-rules
-  [rules]
+(defn- validate-rules [rules]
   (doseq [[dp f] rules]
     (when (not (valid? f dp))
       (throw
@@ -280,8 +279,13 @@
         (format "%s is an invalid rule for %s" (fieldStr f) dp))))))
 
 (defn rule
-  ([rules]
-   (let [rules (parse-rules rules)
+  "Allows you to specify rules a-la-cart, and anything missing
+  will use the default rules eg {:day-of-year [\"/5\"]} will
+  return a rule which describes execution every 5 days at midnight.
+
+  Also performs validation.  Throws an exception if invalid."
+  ([m]
+   (let [rules (parse-rules m)
          _ (validate-rules rules)]
      (reduce
       (fn [a [dp field]]
@@ -300,31 +304,51 @@
    "fri" "6"
    "sat" "7"})
 
-(defn sub-days [field]
-  (reduce
-   (fn [a [abbr n]]
-     (s/replace a abbr n))
-   field day-abbrs))
-
-(defn translate-cron [field]
+(defn translate-cron
+  "Given a cron field (string), translates it to input
+  which the rule function will understand."
+  [field]
   (cond
     (re-find #"^\d$" field) (parse-long field)
     (s/includes? field ",") (map parse-long (s/split field #","))
     :else field))
 
-(defn parse-cron [s]
+(defn substitute-days
+  "substitutes day names eg SUN-SAT in the cron
+  string for their numeric representations eg 1-7"
+  [s]
+  (reduce
+   (fn [a [abbr n]]
+     (s/replace a abbr n))
+   s day-abbrs))
+
+(defn- parse-cron [s]
   (map translate-cron
        (-> s s/lower-case
-           sub-days (s/split #" "))))
+           substitute-days
+           (s/split #" "))))
 
-(defn validate-cron [coll]
+(defn- validate-cron [coll]
   (if (== (count coll) 5)
     coll
     (throw
      (IllegalArgumentException.
       "Cron needs exactly 5 fields eg * * * * *"))))
 
-(defn cron [s]
+(defn cron
+  "Takes a cron string eg \"* * * * *\" and returns
+  the corresponding rule.  Uses standard order of:
+    - minute
+    - hour
+    - day of the month
+    - month
+    - day of the week
+
+  Performs validation.  Throws an exception if invalid.
+
+  An example:
+  /5 * * 11,12 MON-FRI Every 5 minutes on weekdays in Nov & Dec"
+  [s]
   (let [[minute hour day-of-month month weekday] (validate-cron (parse-cron s))]
     (rule {:minute [minute] :hour [hour]
            :day-of-month [day-of-month]
