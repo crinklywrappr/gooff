@@ -9,15 +9,16 @@
 
 ;; --- DATE-TIME ---
 
-;; needed for scheduling fields
-
-;; convenience
-
 ;; convenience
 (defn- tz
   "Returns the datetime translated to the local timezone"
   [dt]
   (t/to-time-zone dt (t/default-time-zone)))
+
+(defn now
+  "Returns the current date-time in the local timezone"
+  []
+  (tz (t/now)))
 
 ;; needed for scheduling fields
 (defn weekday
@@ -76,14 +77,14 @@
 (defn today
   "returns start-of-day according to the local time-zone"
   []
-  (let [dt (tz (t/now))]
+  (let [dt (now)]
     (t/minus
      dt (t/hours (t/hour dt))
      (t/minutes (t/minute dt))
      (t/seconds (t/second dt))
      (t/millis (t/milli dt)))))
 
-(defn add-year
+(defn next-year
   "Adds a year to the given datetime"
   [dt]
   (t/plus dt (t/years 1)))
@@ -98,19 +99,6 @@
   a & b are both date-times"
   [a b]
   (t/before? a b))
-
-(defn before-now?
-  "Returns true if dt is before
-  the current local datetime"
-  [dt]
-  (before? dt (tz (t/now))))
-
-(defn days-seq
-  "Returns a seq of days between from & to"
-  [from to]
-  (take-while
-   #(before? % to)
-   (iterate tomorrow from)))
 
 (defn add-time
   "Add the time parameters the the given date"
@@ -128,7 +116,7 @@
   [dt]
   (t/in-millis
    (t/interval
-    (tz (t/now)) dt)))
+    (now) dt)))
 
 ;; --- SCHEDULING FIELDS ---
 
@@ -419,6 +407,19 @@
          :second 60)
        (:rep this))))))
 
+(defn days-seq
+  "Returns a seq of days between from & to"
+  [from to]
+  (take-while
+   #(before? % to)
+   (iterate tomorrow from)))
+
+(defn before-now?
+  "Returns true if dt is before
+  the current local datetime"
+  [dt]
+  (before? dt (now)))
+
 (defn date-matches? [rules dt]
   (every?
    (fn [[dp fs]]
@@ -441,7 +442,7 @@
   (->>
    (for [d (filter
             (partial date-matches? rules)
-            (days-seq (today) (add-year (today))))
+            (days-seq (today) (next-year (today))))
          h (time-gen rules :hour)
          m (time-gen rules :minute)
          s (time-gen rules :second)]
@@ -449,7 +450,7 @@
    (drop-while before-now?)
    (take n)))
 
-;;  --- SCHEDULING ---
+;; --- SCHEDULING ---
 
 (defn at [dt f & args]
   (let [trigger (promise)]
@@ -527,3 +528,7 @@
   ([]
    (doseq [nm (keys @sched-map)]
      (stop nm))))
+
+(defn restart [nm & args]
+  (stop nm)
+  (apply start (concat [nm] args)))
