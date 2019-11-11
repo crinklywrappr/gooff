@@ -549,13 +549,15 @@
   If you need this to take effect
   immediately, call `(restart ...)`"
   [nm rules]
-  (swap! sched-map assoc-in [nm :rules] rules))
+  (when (contains? @sched-map nm)
+    (swap! sched-map assoc-in [nm :rules] rules)))
 
 (defn update-fn
   "Updates the function associated with the task nm.
   Can be done while the task is running."
   [nm f]
-  (swap! sched-map assoc-in [nm :fn] f))
+  (when (contains? @sched-map nm)
+    (swap! sched-map assoc-in [nm :fn] f)))
 
 (declare start-aux)
 
@@ -586,7 +588,7 @@
 (defn start
   "kick off task execution."
   [nm & args]
-  (when (not= (status nm) :running)
+  (when (and (contains? @sched-map nm) (not= (status nm) :running))
     (apply start-aux (concat [nm sched-fn] args))
     (swap! sched-map assoc-in [nm :status] :running)))
 
@@ -594,7 +596,7 @@
   "kicks off iterative task execution.  This uses the
   output of each function call as the input of the next"
   [nm & args]
-  (when (not= (status nm) :running)
+  (when (and (contains? @sched-map nm) (not= (status nm) :running))
     (apply start-aux (concat [nm iterate-fn] args))
     (swap! sched-map assoc-in [nm :status] :running)
     (swap! sched-map assoc-in [nm :type] :iterative)))
