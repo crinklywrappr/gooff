@@ -9,6 +9,8 @@ Add to your project
     gooff "1.0.0"
 
 
+### Rules
+
 Scheduling rules are specified à la carte by calling `(rule ...)` eg this describes a schedule which executes every 5 seconds:
 
 ```clojure
@@ -17,6 +19,9 @@ Scheduling rules are specified à la carte by calling `(rule ...)` eg this descr
 ```
 
 Or you can call `(rule ...)` without any parameters to get the default rule, which expresses execution every day at midnight.
+
+
+### Cron
 
 Additionally, rules can be created from basic cron syntax by calling `(cron ...)` eg this specifies execution which occurs every 5 minutes on weekdays in November & December:
 
@@ -34,6 +39,9 @@ Additionally, rules can be created from basic cron syntax by calling `(cron ...)
 ```
 
 Both `(rule ...)` & `(cron ...)` validate their inputs, and throw an exception if input was invalid.
+
+
+### Simulation
 
 Now we want to check if our rule does what we want.  This is accomplished by calling `(simulate ...)`:
 
@@ -53,6 +61,9 @@ Now we want to check if our rule does what we want.  This is accomplished by cal
 ```
 
 Your dates will look different, but you should see the seconds counting up by 5 and landing on each 5th second.  Hooray!
+
+
+### Scheduling
 
 Let's schedule something!
 
@@ -87,6 +98,8 @@ You may have noticed that `(at ...)` returned a function.  Call it to prevent ex
 ; => #<Promise@22bc5bc5: :stop>
 ```
 
+
+### Scheduling Orchestration
 
 ## License
 
