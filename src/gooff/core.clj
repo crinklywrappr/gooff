@@ -483,7 +483,11 @@
    (->>
     (for [d (filter
              (partial date-matches? rules)
-             (days-seq (today) (next-year (today))))
+             (days-seq
+              (today)
+              (next-year
+               (next-year
+                (today)))))
           h (time-gen rules :hour)
           m (time-gen rules :minute)
           s (time-gen rules :second)]
