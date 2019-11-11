@@ -121,6 +121,8 @@
 ;; --- SCHEDULING FIELDS ---
 
 (defn basic-valid?
+  "returns true if the numer n is
+  'in range' for the given datepart (dp)"
   [dp n]
   (or
    (and (= (dp :day-of-month)) (> n 0))
@@ -228,7 +230,11 @@
        (IllegalArgumentException.
         "field-shifted-repetition expects a string in the form of n/n")))))
 
-(defn parse-field [field]
+(defn parse-field
+  "Given a scheduling field eg
+  '*', 1 [1 2 3] '/5' '-2/5'
+  returns the appropriate type"
+  [field]
   (cond
     (int? field) (field-exact field)
     (coll? field) (field-alternation field)
@@ -242,6 +248,7 @@
 
 ;; default rule is every day at midnight
 (def default-rule
+  ^{:doc "The default rule expresses execution every day at midnight"}
   {:day-of-month ["*"]
    :month        ["*"]
    :weekday      ["*"]
@@ -436,19 +443,20 @@
        (sort <)))
 
 (defn simulate
-  "simulates the first n executions within a year by
-  returning a seq of the datetimes which meet the rules"
-  [rules n]
-  (->>
-   (for [d (filter
-            (partial date-matches? rules)
-            (days-seq (today) (next-year (today))))
-         h (time-gen rules :hour)
-         m (time-gen rules :minute)
-         s (time-gen rules :second)]
-     (add-time d h m s))
-   (drop-while before-now?)
-   (take n)))
+  "simulates executions within a year by returning
+  a seq of the datetimes which meet the rules"
+  ([rules]
+   (->>
+    (for [d (filter
+             (partial date-matches? rules)
+             (days-seq (today) (next-year (today))))
+          h (time-gen rules :hour)
+          m (time-gen rules :minute)
+          s (time-gen rules :second)]
+      (add-time d h m s))
+    (drop-while before-now?)))
+  ([rules n]
+   (take n (simulate rules))))
 
 ;; --- SCHEDULING ---
 
@@ -467,7 +475,9 @@
         (deliver trigger :go))))
     (fn [] (deliver trigger :stop))))
 
-(def ^{:private true}
+(def
+  ^{:private true
+    :doc "gated in order to protect some delicate state management"}
   sched-map
   (atom {}))
 
@@ -497,8 +507,9 @@
   (apply trampoline (concat [start-aux nm] args)))
 
 (defn- start-aux [nm & args]
-  (let [next-run (-> @sched-map (get-in [nm :rules])
-                     (simulate 1) first)]
+  (let [next-run (-> @sched-map
+                     (get-in [nm :rules])
+                     simulate first)]
     (->>
      (->
       [next-run sched-fn nm]
