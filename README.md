@@ -6,7 +6,7 @@ KISS scheduling library.  Inspired by [Snooze](https://github.com/leahneukirchen
 
 Add to your project
 
-    gooff "0.0.1"
+    gooff "0.0.2"
 
 
 ## Quickstart
@@ -146,7 +146,7 @@ Let's kick them both off.
 
 Feel free to call `(update-rules ...)`, `(update-fn ...)`, and `(restart ...)` in order to change the scheduling and execution characterisics.  This can be done live, *while the tasks are running*.
 
-Call `(stop)` to kill the scheduling system, or pass in a name to kill an individual task.
+Call `(stop)` to kill the scheduling system, or pass in a name to kill an individual task.  Use `(clear-schedule)` & `(remove-schedule <nm>)` to clean up.
 
 ```clojure
 (stop)

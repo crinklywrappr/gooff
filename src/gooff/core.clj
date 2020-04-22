@@ -315,7 +315,7 @@
   which the rule function will understand."
   [field]
   (cond
-    (re-find #"^\d$" field) (parse-long field)
+    (re-find #"^\d+$" field) (parse-long field)
     (s/includes? field ",") (map parse-long (s/split field #","))
     :else field))
 
@@ -551,6 +551,12 @@
   [nm]
   (when (nil? (status nm))
     (swap! sched-map dissoc nm)))
+
+(defn clear-schedule
+  "Removes all non-running tasks from sched-map"
+  []
+  (doseq [k (keys @sched-map)]
+    (remove-schedule k)))
 
 (defn update-rules
   "Alter the execution schedule of a
