@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Nothing yet
 
-## 0.0.2 - 2020-4-22
+## [0.0.2] - 2020-4-22
 ### Fixed
 - Cron now accepts multi-digit exact matches
 
