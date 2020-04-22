@@ -15,5 +15,5 @@ All notable changes to this project will be documented in this file. This change
 ## 0.0.1 - 2019-11-19
 ### Initial release
 
-[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.2...HEAD
 [0.0.2]: https://github.com/crinklywrappr/gooff/compare/v0.0.1...v0.0.2
