@@ -505,21 +505,25 @@
 
 (defn at
   "Specify the function f to run at a particular datetime.
-  Returns a function which will prevent execution of f when called."
+  Returns a function which will prevent execution of f when called.
+  Calling that function by passing a fn, results in the provided new function being called with args"
   [dt f & args]
   (let [trigger (promise)]
     (.start
      (Thread.
       (fn []
-        (when (not= @trigger :stop)
-          (apply f args)))))
+        (cond
+          (= @trigger :go) (apply f args)
+          (fn? @trigger) (apply @trigger args)))))
     (.start
      (Thread.
       (fn []
         (Thread/sleep
          (millis-from-now dt))
         (deliver trigger :go))))
-    (fn [] (deliver trigger :stop))))
+    (fn
+      ([] (deliver trigger :stop))
+      ([f] (deliver trigger f)))))
 
 (def
   ^{:private true
@@ -585,50 +589,67 @@
     (apply trampoline (concat [start-aux nm iterate-fn] [args]))))
 
 (defn- start-aux [nm f & args]
-  (let [next-run (-> @sched-map
-                     (get-in [nm :rules])
-                     simulate first)]
-    (->>
-     (->
-      [next-run f nm]
-      (concat args))
-     (apply at)
-     (swap!
-      sched-map assoc-in
-      [nm :stop]))
-    (swap!
-     sched-map assoc-in
-     [nm :next-run] next-run)))
+  (if (= (status nm) :running)
+    (let [next-run (-> @sched-map
+                       (get-in [nm :rules])
+                       simulate first)]
+      (->>
+       (->
+        [next-run f nm]
+        (concat args))
+       (apply at)
+       (swap!
+        sched-map assoc-in
+        [nm :stop]))
+      (swap!
+       sched-map assoc-in
+       [nm :next-run] next-run))
+    (when-let [cb (get-in @sched-map [nm :cb])]
+      (swap! sched-map
+             assoc nm (dissoc (get @sched-map nm) :cb))
+      (apply cb args))))
 
 (defn start
   "kick off task execution."
   [nm & args]
   (when (and (contains? @sched-map nm) (not= (status nm) :running))
-    (apply start-aux (concat [nm sched-fn] args))
-    (swap! sched-map assoc-in [nm :status] :running)))
+    (swap! sched-map assoc-in [nm :status] :running)
+    (apply start-aux (concat [nm sched-fn] args))))
 
 (defn start-iterate
   "kicks off iterative task execution.  This uses the
   output of each function call as the input of the next"
   [nm & args]
   (when (and (contains? @sched-map nm) (not= (status nm) :running))
-    (apply start-aux (concat [nm iterate-fn] args))
     (swap! sched-map assoc-in [nm :status] :running)
-    (swap! sched-map assoc-in [nm :type] :iterative)))
+    (swap! sched-map assoc-in [nm :type] :iterative)
+    (apply start-aux (concat [nm iterate-fn] args))))
 
 (defn stop
-  "Stop task execution.  With no args, stops all task execution."
-  ([nm]
+  "Stop task execution.
+  With no args, stops all task execution.
+  Optional callback function can be provided for when execution is ended.
+  Callback will recieve args which would have went to next function call.
+
+  This is slightly complicated, because under the covers there are two
+  execution stacks which can potentially run your `cb`.  One is from
+  `start-aux`, which gets called if the task was executing during `stop`.
+  The other is from `at`, which runs your callback if it was waiting to
+  execute."
+  ([nm cb]
    (when-let [f (get-in @sched-map [nm :stop])]
-     (f)
      (swap!
       sched-map assoc nm
-      (select-keys
-       (get @sched-map nm)
-       [:rules :fn]))))
+      (-> @sched-map
+          (get nm)
+          (select-keys [:rules :fn])
+          (assoc :cb cb)))
+     (f cb)))
+  ([nm]
+   (stop nm (constantly nil)))
   ([]
    (doseq [nm (keys @sched-map)]
-     (stop nm))))
+     (stop nm (constantly nil)))))
 
 (defn restart
   "Restarts task execution."
