@@ -655,7 +655,8 @@
   "Restarts task execution."
   [nm & args]
   (let [typ (get-in @sched-map [nm :type])]
-    (stop nm)
-    (case typ
-      nil (apply start (concat [nm] args))
-      :iterative (apply start-iterate (concat [nm] args)))))
+    (stop nm
+          (fn [& _]
+            (case typ
+              nil (apply start (concat [nm] args))
+              :iterative (apply start-iterate (concat [nm] args)))))))
