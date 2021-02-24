@@ -3,9 +3,13 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Changed
+Nothing yet
+
+
+## [0.0.4] - 2021-02-23
+### Improved
 - `at` has potential to produce an uncaught exception. 
    It now throws a custom `ex-info` which provides detailed information about the problem.
-
 
 ## [0.0.3] - 2020-12-16
 ### Fixed
@@ -40,6 +44,7 @@ All notable changes to this project will be documented in this file. This change
 ## 0.0.1 - 2019-11-19
 ### Initial release
 
-[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/crinklywrappr/gooff/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/crinklywrappr/gooff/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/crinklywrappr/gooff/compare/v0.0.1...v0.0.2
