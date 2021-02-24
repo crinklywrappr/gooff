@@ -518,9 +518,15 @@
     (.start
      (Thread.
       (fn []
-        (Thread/sleep
-         (millis-from-now dt))
-        (deliver trigger :go))))
+        (try
+          (Thread/sleep
+           (millis-from-now dt))
+          (deliver trigger :go)
+          (catch Exception e
+            (throw
+             (ex-info
+              "gooff: Unable to schedule function or next task execution"
+              {:dt dt :f f :args args} e)))))))
     (fn
       ([] (deliver trigger :stop))
       ([f] (deliver trigger f)))))

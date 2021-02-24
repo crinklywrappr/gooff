@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 ### Changed
-- Nothing yet
+- `at` has potential to produce an uncaught exception. 
+   It now throws a custom `ex-info` which provides detailed information about the problem.
 
 
 ## [0.0.3] - 2020-12-16
