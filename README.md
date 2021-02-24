@@ -6,7 +6,7 @@ KISS scheduling library.  Inspired by [Snooze](https://github.com/leahneukirchen
 
 Add to your project
 
-    gooff "0.0.2"
+    gooff "0.0.4"
 
 
 ## Quickstart
