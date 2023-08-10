@@ -4,8 +4,10 @@
 
 ;; --- UTIL ---
 
-(defn parse-long [s]
-  (Long/parseLong s))
+(defn ^:private parse-long' [s]
+  (if-let [f (resolve 'clojure.core/parse-long)] ;; make compatible with Clojure 1.11.0 onwards
+    (f s)
+    (Long/parseLong s)))
 
 ;; --- DATE-TIME ---
 
@@ -198,7 +200,7 @@
 (defn field-range [s]
   (let [[from to] (->> s
                        (re-find range-pattern)
-                       rest (map parse-long))]
+                       rest (map parse-long'))]
     (when (or (nil? from) (nil? to))
       (throw
        (IllegalArgumentException.
@@ -215,7 +217,7 @@
   (let [rep (try
             (-> repetition-pattern
                 (re-find s)
-                last parse-long)
+                last parse-long')
             (catch Exception e
               (throw
                (IllegalArgumentException.
@@ -225,7 +227,7 @@
 (defn field-shifted-repetition [s]
   (let [[shift rep] (->> s
                          (re-find shifted-pattern)
-                         rest (map parse-long))]
+                         rest (map parse-long'))]
     (if (and (some? shift) (some? rep)
              (or (neg? shift) (pos? shift))
              (pos? rep))
@@ -315,8 +317,8 @@
   which the rule function will understand."
   [field]
   (cond
-    (re-find #"^\d+$" field) (parse-long field)
-    (s/includes? field ",") (map parse-long (s/split field #","))
+    (re-find #"^\d+$" field) (parse-long' field)
+    (s/includes? field ",") (map parse-long' (s/split field #","))
     :else field))
 
 (defn substitute-days
