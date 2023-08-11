@@ -1,10 +1,11 @@
 (ns gooff.core
+  (:refer-clojure :exclude [parse-long])
   (:require [clj-time.core :as t]
             [clojure.string :as s]))
 
 ;; --- UTIL ---
 
-(defn parse-long [s]
+(defn ^:private parse-long [s]
   (Long/parseLong s))
 
 ;; --- DATE-TIME ---

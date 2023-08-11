@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 Nothing yet
 
+## [0.0.5] - 2023-08-11
+### Improved
+- Make library compatible with Clojure 1.11.0 and above
 
 ## [0.0.4] - 2021-02-23
 ### Improved
-- `at` has potential to produce an uncaught exception. 
+- `at` has potential to produce an uncaught exception.
    It now throws a custom `ex-info` which provides detailed information about the problem.
 
 ## [0.0.3] - 2020-12-16
@@ -44,7 +47,8 @@ Nothing yet
 ## 0.0.1 - 2019-11-19
 ### Initial release
 
-[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/crinklywrappr/gooff/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/crinklywrappr/gooff/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/crinklywrappr/gooff/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/crinklywrappr/gooff/compare/v0.0.1...v0.0.2

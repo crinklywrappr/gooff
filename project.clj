@@ -1,4 +1,4 @@
-(defproject gooff "0.0.4"
+(defproject gooff "0.0.5"
   :description "KISS scheduling library. Inspired by Snooze"
   :url "https://github.com/doubleagent/gooff"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
