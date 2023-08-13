@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 Nothing yet
 
+## [0.0.6] - 2023-08-11
+### Improved
+- Change project coordinates inline with latest Clojars [recommendation](https://github.com/clojars/clojars-web/wiki/Verified-Group-Names)
+- Bump up Clojure build version to 1.11.1
+- Bump up Clojure test check version to 1.1.1
+
 ## [0.0.5] - 2023-08-11
 ### Improved
 - Make library compatible with Clojure 1.11.0 and above
@@ -47,7 +53,8 @@ Nothing yet
 ## 0.0.1 - 2019-11-19
 ### Initial release
 
-[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/crinklywrappr/gooff/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/crinklywrappr/gooff/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/crinklywrappr/gooff/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/crinklywrappr/gooff/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/crinklywrappr/gooff/compare/v0.0.2...v0.0.3
